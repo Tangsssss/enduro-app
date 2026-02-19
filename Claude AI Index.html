@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>ENDURO — Race Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #1a1a24;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --text: #f0f0f5;
+      --text2: #8888a0;
+      --text3: #555568;
+      --accent-run: #ff4d1c;
+      --accent-trail: #22c55e;
+      --accent-tri: #3b82f6;
+      --accent-swim: #06b6d4;
+      --accent-bike: #f59e0b;
+      --accent-run2: #ff6b3d;
+      --gold: #f59e0b;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.3;
+    }
+
+    /* ── AUTH SCREEN ── */
+    #auth-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,77,28,0.15) 0%, transparent 70%);
+    }
+
+    .auth-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      letter-spacing: 4px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .auth-tagline {
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 48px;
+    }
+
+    .auth-card {
+      width: 100%; max-width: 400px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 24px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg3);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 28px;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .auth-tab.active {
+      background: var(--accent-run);
+      color: #fff;
+    }
+
+    .field-group { margin-bottom: 16px; }
+    .field-group label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 8px;
+    }
+    .field-group input, .field-group select {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field-group input:focus, .field-group select:focus { border-color: var(--accent-run); }
+    .field-group select option { background: var(--bg3); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent-run);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+    /* ── MAIN APP ── */
+    #app { display: none; min-height: 100vh; padding-bottom: 80px; }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--text); }
+    .topbar-user {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text2);
+    }
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-run), var(--accent-tri));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px; color: #fff;
+    }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      display: flex;
+      background: rgba(10,10,15,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 8px 0 env(safe-area-inset-bottom, 8px);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 4px;
+      border: none; background: transparent; cursor: pointer;
+      color: var(--text3);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px; letter-spacing: 0.5px;
+      transition: color 0.2s;
+    }
+    .nav-item svg { width: 22px; height: 22px; }
+    .nav-item.active { color: var(--accent-run); }
+    .nav-item.active svg { stroke: var(--accent-run); }
+
+    /* ── PAGES ── */
+    .page { display: none; padding: 20px; }
+    .page.active { display: block; }
+
+    /* ── FEED PAGE ── */
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    .feed-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .feed-card-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 16px 12px;
+    }
+    .feed-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-trail), var(--accent-tri));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; color: #fff;
+      flex-shrink: 0;
+    }
+    .feed-meta { flex: 1; }
+    .feed-name { font-size: 14px; font-weight: 600; }
+    .feed-date { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .sport-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .badge-trail { background: rgba(34,197,94,0.15); color: var(--accent-trail); border: 1px solid rgba(34,197,94,0.3); }
+    .badge-run { background: rgba(255,77,28,0.15); color: var(--accent-run); border: 1px solid rgba(255,77,28,0.3); }
+    .badge-tri { background: rgba(59,130,246,0.15); color: var(--accent-tri); border: 1px solid rgba(59,130,246,0.3); }
+
+    .feed-race-name {
+      padding: 0 16px 12px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1px;
+    }
+
+    .feed-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: var(--border);
+      border-top: 1px solid var(--border);
+    }
+    .stat-cell {
+      background: var(--bg2);
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .stat-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .stat-label {
+      font-size: 10px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* Triathlon segments */
+    .tri-segments {
+      padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .tri-segment {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--bg3);
+    }
+    .seg-icon { font-size: 18px; width: 24px; text-align: center; }
+    .seg-info { flex: 1; }
+    .seg-name { font-size: 12px; font-weight: 600; color: var(--text2); }
+    .seg-detail { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); margin-top: 2px; }
+    .seg-time { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+    .seg-swim { color: var(--accent-swim); }
+    .seg-bike { color: var(--accent-bike); }
+    .seg-run-c { color: var(--accent-run); }
+
+    .feed-actions {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-like {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-like.liked { border-color: var(--accent-run); color: var(--accent-run); background: rgba(255,77,28,0.08); }
+    .btn-like svg { width: 16px; height: 16px; }
+
+    /* ── ADD RACE PAGE ── */
+    .sport-selector {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 28px;
+    }
+    .sport-btn {
+      padding: 16px 8px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg2);
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px; font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sport-btn span { display: block; font-size: 24px; margin-bottom: 8px; }
+    .sport-btn.active-trail { border-color: var(--accent-trail); color: var(--accent-trail); background: rgba(34,197,94,0.08); }
+    .sport-btn.active-run { border-color: var(--accent-run); color: var(--accent-run); background: rgba(255,77,28,0.08); }
+    .sport-btn.active-tri { border-color: var(--accent-tri); color: var(--accent-tri); background: rgba(59,130,246,0.08); }
+
+    .form-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .form-section-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 16px;
+    }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .segment-section {
+      border-left: 3px solid;
+      padding-left: 16px;
+      margin-bottom: 20px;
+    }
+    .seg-swim-s { border-color: var(--accent-swim); }
+    .seg-bike-s { border-color: var(--accent-bike); }
+    .seg-run-s { border-color: var(--accent-run); }
+
+    .segment-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    /* ── STATS PAGE ── */
+    .stats-hero {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      position: relative; overflow: hidden;
+    }
+    .stats-hero::after {
+      content: '';
+      position: absolute; top: -40px; right: -40px;
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,77,28,0.15), transparent 70%);
+    }
+    .stats-hero-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+    .stats-hero-val { font-family: 'Bebas Neue', sans-serif; font-size: 64px; letter-spacing: 2px; line-height: 1; }
+    .stats-hero-sub { font-size: 13px; color: var(--text2); margin-top: 8px; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .stat-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 16px;
+    }
+    .stat-box-val { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; }
+    .stat-box-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    .race-list-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .race-list-item:active { border-color: var(--border2); }
+    .race-list-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .race-list-info { flex: 1; }
+    .race-list-name { font-size: 15px; font-weight: 600; }
+    .race-list-meta { font-size: 12px; color: var(--text3); margin-top: 3px; }
+    .race-list-time { font-family: 'DM Mono', monospace; font-size: 16px; color: var(--text); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 40px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: var(--border2);
+      border-radius: 2px;
+      margin: 0 auto 24px;
+    }
+    .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; margin-bottom: 20px; }
+
+    .detail-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .detail-stat {
+      background: var(--bg3);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .detail-stat-val { font-family: 'DM Mono', monospace; font-size: 20px; color: var(--text); }
+    .detail-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    .btn-outline {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all 0.2s;
+      margin-top: 12px;
+    }
+    .btn-outline:hover { border-color: var(--accent-run); color: var(--accent-run); }
+
+    .btn-danger {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-sm);
+      color: #ef4444;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+
+    /* ── ADMIN PAGE ── */
+    .admin-user-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+    }
+    .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+    .admin-user-info { flex: 1; }
+    .admin-user-name { font-size: 14px; font-weight: 600; }
+    .admin-user-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .btn-sm-danger {
+      padding: 6px 12px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 6px;
+      color: #ef4444;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 14px;
+    }
+
+    .export-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 18px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .export-btn:hover { border-color: var(--accent-trail); }
+    .export-btn-info { display: flex; align-items: center; gap: 12px; }
+    .export-btn-icon { font-size: 22px; }
+    .export-btn-label { font-size: 14px; font-weight: 600; }
+    .export-btn-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .export-btn-arrow { color: var(--text3); font-size: 18px; }
+
+    /* toast */
+    .toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 30px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 9000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text3);
+    }
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--text2); margin-bottom: 8px; }
+    .empty-state-text { font-size: 14px; line-height: 1.6; }
+
+    .fab {
+      position: fixed; bottom: 90px; right: 20px; z-index: 150;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--accent-run);
+      border: none;
+      color: #fff;
+      font-size: 28px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255,77,28,0.4);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s;
+    }
+    .fab:active { transform: scale(0.92); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ── AUTH ── -->
+<div id="auth-screen">
+  <div class="auth-logo">ENDURO</div>
+  <div class="auth-tagline">Race Performance Tracker</div>
+
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Connexion</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Inscription</button>
+    </div>
+
+    <div id="login-form">
+      <div class="field-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="ton@email.com" />
+      </div>
+      <div class="field-group">
+        <label>Mot de passe</label>
+        <input type="password" id="login-password" placeholder="••••••••" />
+      </div>
+      <button class="btn-primary" onclick="login()">Se connecter</button>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="field-group">
+        <label>Pseudo</label>
+        <input type="text" id="reg-pseudo" placeholder="ultrarunner42" />
+      </div>
+      <div class="field-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="ton@email.com" />
+      </div>
+      <div class="field-group">
+        <label>Mot de passe</label>
+        <input type="password" id="reg-password" placeholder="Minimum 6 caractères" />
+      </div>
+      <div class="field-group">
+        <label>Nationalité</label>
+        <select id="reg-country">
+          <option value="">Sélectionner...</option>
+          <option value="FR">🇫🇷 France</option>
+          <option value="BE">🇧🇪 Belgique</option>
+          <option value="CH">🇨🇭 Suisse</option>
+          <option value="LU">🇱🇺 Luxembourg</option>
+          <option value="ES">🇪🇸 Espagne</option>
+          <option value="IT">🇮🇹 Italie</option>
+          <option value="DE">🇩🇪 Allemagne</option>
+          <option value="GB">🇬🇧 Royaume-Uni</option>
+          <option value="US">🇺🇸 États-Unis</option>
+          <option value="PT">🇵🇹 Portugal</option>
+          <option value="NL">🇳🇱 Pays-Bas</option>
+          <option value="AU">🇦🇺 Australie</option>
+          <option value="CA">🇨🇦 Canada</option>
+          <option value="JP">🇯🇵 Japon</option>
+          <option value="BR">🇧🇷 Brésil</option>
+          <option value="OTHER">🌍 Autre</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="register()">Créer mon compte</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">ENDURO</div>
+    <div class="topbar-user">
+      <span id="topbar-pseudo" style="font-size:13px;color:var(--text2)"></span>
+      <div class="avatar" id="topbar-avatar">U</div>
+      <button onclick="logout()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;">Déco</button>
+    </div>
+  </div>
+
+  <!-- FEED -->
+  <div id="page-feed" class="page active">
+    <div style="padding-top:8px">
+      <div class="page-title">Fil d'actu</div>
+      <div id="feed-list"></div>
+    </div>
+  </div>
+
+  <!-- ADD RACE -->
+  <div id="page-add" class="page">
+    <div class="page-title">Nouvelle course</div>
+
+    <div class="sport-selector">
+      <button class="sport-btn" onclick="selectSport('trail')" id="btn-trail">
+        <span>⛰️</span>Trail
+      </button>
+      <button class="sport-btn" onclick="selectSport('run')" id="btn-run">
+        <span>🏃</span>Running
+      </button>
+      <button class="sport-btn" onclick="selectSport('tri')" id="btn-tri">
+        <span>🏊</span>Triathlon
+      </button>
+    </div>
+
+    <!-- Common fields -->
+    <div class="form-section">
+      <div class="form-section-title">Informations générales</div>
+      <div class="field-group">
+        <label>Nom de la course</label>
+        <input type="text" id="race-name" placeholder="UTMB, IronMan Nice…" />
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label>Date</label>
+          <input type="date" id="race-date" />
+        </div>
+        <div class="field-group">
+          <label>Lieu</label>
+          <input type="text" id="race-location" placeholder="Chamonix" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Trail / Run fields -->
+    <div id="form-trail-run" class="form-section" style="display:none">
+      <div class="form-section-title">Performance</div>
+      <div class="row-2">
+        <div class="field-group">
+          <label>Distance (km)</label>
+          <input type="number" id="tr-distance" placeholder="42.2" step="0.1" />
+        </div>
+        <div class="field-group">
+          <label>Dénivelé + (m)</label>
+          <input type="number" id="tr-denivelé" placeholder="2500" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Temps total (hh:mm:ss)</label>
+        <input type="text" id="tr-time" placeholder="03:45:00" />
+      </div>
+    </div>
+
+    <!-- Triathlon fields -->
+    <div id="form-tri" style="display:none">
+      <!-- Swim -->
+      <div class="form-section">
+        <div class="segment-section seg-swim-s">
+          <div class="segment-title"><span style="color:var(--accent-swim)">🏊 Natation</span></div>
+          <div class="row-2">
+            <div class="field-group">
+              <label>Distance (m)</label>
+              <input type="number" id="tri-swim-dist" placeholder="1500" />
+            </div>
+            <div class="field-group">
+              <label>Temps (mm:ss)</label>
+              <input type="text" id="tri-swim-time" placeholder="22:00" />
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Transition T1 (mm:ss)</label>
+          <input type="text" id="tri-t1" placeholder="02:30" />
+        </div>
+      </div>
+
+      <!-- Bike -->
+      <div class="form-section">
+        <div class="segment-section seg-bike-s">
+          <div class="segment-title"><span style="color:var(--accent-bike)">🚴 Vélo</span></div>
+          <div class="row-2">
+            <div class="field-group">
+              <label>Distance (km)</label>
+              <input type="number" id="tri-bike-dist" placeholder="40" step="0.1" />
+            </div>
+            <div class="field-group">
+              <label>Dénivelé + (m)</label>
+              <input type="number" id="tri-bike-denivelé" placeholder="500" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Temps (hh:mm:ss)</label>
+            <input type="text" id="tri-bike-time" placeholder="01:10:00" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Transition T2 (mm:ss)</label>
+          <input type="text" id="tri-t2" placeholder="01:30" />
+        </div>
+      </div>
+
+      <!-- Run -->
+      <div class="form-section">
+        <div class="segment-section seg-run-s">
+          <div class="segment-title"><span style="color:var(--accent-run)">🏃 Course à pied</span></div>
+          <div class="row-2">
+            <div class="field-group">
+              <label>Distance (km)</label>
+              <input type="number" id="tri-run-dist" placeholder="10" step="0.1" />
+            </div>
+            <div class="field-group">
+              <label>Dénivelé + (m)</label>
+              <input type="number" id="tri-run-denivelé" placeholder="100" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Temps (hh:mm:ss)</label>
+            <input type="text" id="tri-run-time" placeholder="00:48:00" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="save-btn-wrap" style="display:none">
+      <button class="btn-primary" onclick="saveRace()">💾 Enregistrer la course</button>
+    </div>
+  </div>
+
+  <!-- MY RACES -->
+  <div id="page-races" class="page">
+    <div class="page-title">Mes courses</div>
+
+    <div class="stats-grid" id="my-stats-grid">
+      <div class="stat-box">
+        <div class="stat-box-val" id="st-total">0</div>
+        <div class="stat-box-label">Courses</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-val" id="st-km">0</div>
+        <div class="stat-box-label">km totaux</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-val" id="st-d+">0</div>
+        <div class="stat-box-label">D+ total (m)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-val" id="st-trails">0</div>
+        <div class="stat-box-label">Trails</div>
+      </div>
+    </div>
+
+    <div class="section-label">Historique</div>
+    <div id="my-race-list"></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="page-admin" class="page">
+    <div class="page-title">Admin</div>
+
+    <div class="section-label" style="margin-bottom:16px">Utilisateurs inscrits</div>
+    <div id="admin-user-list"></div>
+
+    <div class="section-label" style="margin-top:28px; margin-bottom:16px">Export des données</div>
+
+    <div class="export-btn" onclick="exportMyData()">
+      <div class="export-btn-info">
+        <div class="export-btn-icon">📊</div>
+        <div>
+          <div class="export-btn-label">Exporter mes courses</div>
+          <div class="export-btn-desc">Télécharger au format CSV / Excel</div>
+        </div>
+      </div>
+      <div class="export-btn-arrow">›</div>
+    </div>
+
+    <div class="export-btn" onclick="exportAllData()">
+      <div class="export-btn-info">
+        <div class="export-btn-icon">🗂️</div>
+        <div>
+          <div class="export-btn-label">Export global (admin)</div>
+          <div class="export-btn-desc">Toutes les courses de tous les athlètes</div>
+        </div>
+      </div>
+      <div class="export-btn-arrow">›</div>
+    </div>
+
+    <div class="section-label" style="margin-top:28px; margin-bottom:16px">RGPD</div>
+    <div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:16px;font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;">
+      La suppression d'un compte supprime définitivement toutes les données associées (courses, photos, GPX) conformément au RGPD Art. 17.
+    </div>
+    <button class="btn-danger" onclick="deleteMyAccount()">🗑️ Supprimer mon compte et mes données</button>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showPage('feed')" id="nav-feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Accueil
+    </button>
+    <button class="nav-item" onclick="showPage('races')" id="nav-races">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Mes courses
+    </button>
+    <button class="nav-item" onclick="showPage('add')" id="nav-add">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Ajouter
+    </button>
+    <button class="nav-item" onclick="showPage('admin')" id="nav-admin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Admin
+    </button>
+  </nav>
+</div>
+
+<!-- RACE DETAIL MODAL -->
+<div class="modal-overlay" id="race-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-race-name">—</div>
+    <div id="modal-content"></div>
+    <button class="btn-outline" onclick="closeModal()">✕ Fermer</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ───────────────────────────────────────────
+// DATA STORE (localStorage for POC)
+// ───────────────────────────────────────────
+const DB = {
+  get: (k) => JSON.parse(localStorage.getItem(k) || 'null'),
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: (k) => localStorage.removeItem(k),
+};
+
+function getUsers() { return DB.get('users') || []; }
+function saveUsers(u) { DB.set('users', u); }
+function getRaces() { return DB.get('races') || []; }
+function saveRaces(r) { DB.set('races', r); }
+function getCurrentUser() { return DB.get('currentUser'); }
+
+// Seed demo data
+function seedDemo() {
+  if (getUsers().length > 0) return;
+  const users = [
+    { id: 'u1', pseudo: 'AlexTrail', email: 'alex@demo.com', password: 'demo', country: 'FR', isAdmin: false },
+    { id: 'u2', pseudo: 'MarieRun', email: 'marie@demo.com', password: 'demo', country: 'BE', isAdmin: false },
+  ];
+  saveUsers(users);
+
+  const races = [
+    {
+      id: 'r1', userId: 'u1', type: 'trail', name: 'UTMB 2024',
+      date: '2024-08-29', location: 'Chamonix', liked: [],
+      distance: 171, denivelé: 10000, time: '28:15:00',
+    },
+    {
+      id: 'r2', userId: 'u2', type: 'run', name: 'Marathon de Paris',
+      date: '2024-04-07', location: 'Paris', liked: [],
+      distance: 42.2, denivelé: 0, time: '03:42:15',
+    },
+    {
+      id: 'r3', userId: 'u1', type: 'tri', name: 'IronMan Nice 2024',
+      date: '2024-06-23', location: 'Nice', liked: [],
+      swim: { distance: 3800, time: '01:05:00' },
+      t1: '00:04:20',
+      bike: { distance: 180, denivelé: 2500, time: '05:20:00' },
+      t2: '00:02:10',
+      run: { distance: 42.2, denivelé: 200, time: '03:55:00' },
+    },
+    {
+      id: 'r4', userId: 'u2', type: 'trail', name: 'Grand Raid Réunion',
+      date: '2024-10-18', location: 'Réunion', liked: [],
+      distance: 165, denivelé: 9950, time: '32:48:00',
+    },
+  ];
+  saveRaces(races);
+}
+
+// ───────────────────────────────────────────
+// AUTH
+// ───────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+function login() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const users = getUsers();
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) { showToast('❌ Email ou mot de passe incorrect'); return; }
+  DB.set('currentUser', user);
+  launchApp(user);
+}
+
+function register() {
+  const pseudo = document.getElementById('reg-pseudo').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const country = document.getElementById('reg-country').value;
+  if (!pseudo || !email || !password || !country) { showToast('⚠️ Tous les champs sont requis'); return; }
+  if (password.length < 6) { showToast('⚠️ Mot de passe trop court'); return; }
+  const users = getUsers();
+  if (users.find(u => u.email === email)) { showToast('❌ Email déjà utilisé'); return; }
+  const user = { id: 'u' + Date.now(), pseudo, email, password, country, isAdmin: users.length === 0 };
+  users.push(user);
+  saveUsers(users);
+  DB.set('currentUser', user);
+  launchApp(user);
+}
+
+function logout() {
+  DB.del('currentUser');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+function launchApp(user) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('topbar-pseudo').textContent = user.pseudo;
+  document.getElementById('topbar-avatar').textContent = user.pseudo[0].toUpperCase();
+  renderFeed();
+  renderMyRaces();
+  renderAdmin();
+  showPage('feed');
+}
+
+// ───────────────────────────────────────────
+// NAVIGATION
+// ───────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+// ───────────────────────────────────────────
+// SPORT SELECTION & FORM
+// ───────────────────────────────────────────
+let selectedSport = null;
+
+function selectSport(type) {
+  selectedSport = type;
+  ['trail','run','tri'].forEach(s => {
+    document.getElementById('btn-' + s).className = 'sport-btn';
+  });
+  document.getElementById('btn-' + type).className = 'sport-btn active-' + type;
+
+  document.getElementById('form-trail-run').style.display = (type === 'trail' || type === 'run') ? 'block' : 'none';
+  document.getElementById('form-tri').style.display = type === 'tri' ? 'block' : 'none';
+  document.getElementById('save-btn-wrap').style.display = 'block';
+}
+
+// ───────────────────────────────────────────
+// PACE CALCULATION
+// ───────────────────────────────────────────
+function timeToSecs(t) {
+  if (!t) return 0;
+  const parts = t.split(':').map(Number);
+  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  return 0;
+}
+
+function secsToTime(s) {
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  if (h > 0) return `${h}h${String(m).padStart(2,'0')}m${String(sec).padStart(2,'0')}s`;
+  return `${m}m${String(sec).padStart(2,'0')}s`;
+}
+
+function calcPace(distKm, timeStr, type='run') {
+  const secs = timeToSecs(timeStr);
+  if (!distKm || !secs) return '—';
+  if (type === 'swim') {
+    // per 100m
+    const per100m = (secs / (distKm * 10));
+    return secsToTime(Math.round(per100m)) + '/100m';
+  }
+  if (type === 'bike') {
+    const kmh = (distKm / secs * 3600).toFixed(1);
+    return kmh + ' km/h';
+  }
+  const secPerKm = secs / distKm;
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}'${String(s).padStart(2,'0')}"/km`;
+}
+
+function calcTotalTime(race) {
+  if (race.type !== 'tri') return race.time;
+  const total = timeToSecs(race.swim.time) + timeToSecs(race.t1) + timeToSecs(race.bike.time) + timeToSecs(race.t2) + timeToSecs(race.run.time);
+  const h = Math.floor(total/3600);
+  const m = Math.floor((total%3600)/60);
+  const s = total%60;
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ───────────────────────────────────────────
+// SAVE RACE
+// ───────────────────────────────────────────
+function saveRace() {
+  const user = getCurrentUser();
+  if (!selectedSport) { showToast('⚠️ Sélectionne un sport'); return; }
+  const name = document.getElementById('race-name').value.trim();
+  const date = document.getElementById('race-date').value;
+  if (!name || !date) { showToast('⚠️ Nom et date requis'); return; }
+
+  let race = { id: 'r' + Date.now(), userId: user.id, type: selectedSport, name, date, location: document.getElementById('race-location').value.trim(), liked: [] };
+
+  if (selectedSport === 'trail' || selectedSport === 'run') {
+    race.distance = parseFloat(document.getElementById('tr-distance').value) || 0;
+    race.denivelé = parseInt(document.getElementById('tr-denivelé').value) || 0;
+    race.time = document.getElementById('tr-time').value || '00:00:00';
+  } else {
+    race.swim = { distance: parseInt(document.getElementById('tri-swim-dist').value)||0, time: document.getElementById('tri-swim-time').value||'00:00' };
+    race.t1 = document.getElementById('tri-t1').value || '00:00';
+    race.bike = { distance: parseFloat(document.getElementById('tri-bike-dist').value)||0, denivelé: parseInt(document.getElementById('tri-bike-denivelé').value)||0, time: document.getElementById('tri-bike-time').value||'00:00:00' };
+    race.t2 = document.getElementById('tri-t2').value || '00:00';
+    race.run = { distance: parseFloat(document.getElementById('tri-run-dist').value)||0, denivelé: parseInt(document.getElementById('tri-run-denivelé').value)||0, time: document.getElementById('tri-run-time').value||'00:00:00' };
+  }
+
+  const races = getRaces();
+  races.unshift(race);
+  saveRaces(races);
+  showToast('✅ Course enregistrée !');
+  // reset
+  ['race-name','race-date','race-location','tr-distance','tr-denivelé','tr-time',
+   'tri-swim-dist','tri-swim-time','tri-t1','tri-bike-dist','tri-bike-denivelé','tri-bike-time','tri-t2','tri-run-dist','tri-run-denivelé','tri-run-time'
+  ].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  selectedSport = null;
+  ['trail','run','tri'].forEach(s => document.getElementById('btn-'+s).className = 'sport-btn');
+  document.getElementById('form-trail-run').style.display = 'none';
+  document.getElementById('form-tri').style.display = 'none';
+  document.getElementById('save-btn-wrap').style.display = 'none';
+  renderFeed(); renderMyRaces(); renderAdmin();
+  setTimeout(() => showPage('races'), 600);
+}
+
+// ───────────────────────────────────────────
+// RENDER FEED
+// ───────────────────────────────────────────
+function renderFeed() {
+  const user = getCurrentUser();
+  const races = getRaces();
+  const users = getUsers();
+  const container = document.getElementById('feed-list');
+
+  if (races.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏁</div><div class="empty-state-title">Aucune course</div><div class="empty-state-text">Sois le premier à ajouter<br>une performance !</div></div>`;
+    return;
+  }
+
+  container.innerHTML = races.map(race => {
+    const author = users.find(u => u.id === race.userId) || { pseudo: 'Athlète' };
+    const liked = race.liked.includes(user.id);
+    const likeCount = race.liked.length;
+    const isMyRace = race.userId === user.id;
+    const badgeClass = race.type === 'trail' ? 'badge-trail' : race.type === 'run' ? 'badge-run' : 'badge-tri';
+    const badgeLabel = race.type === 'trail' ? 'Trail' : race.type === 'run' ? 'Running' : 'Triathlon';
+    const dateStr = new Date(race.date).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+
+    let statsHtml = '';
+    let segmentsHtml = '';
+
+    if (race.type === 'tri') {
+      const total = calcTotalTime(race);
+      const totalDist = ((race.swim.distance/1000) + race.bike.distance + race.run.distance).toFixed(1);
+      statsHtml = `
+        <div class="feed-stats">
+          <div class="stat-cell"><div class="stat-val">${total}</div><div class="stat-label">Temps total</div></div>
+          <div class="stat-cell"><div class="stat-val">${totalDist}km</div><div class="stat-label">Distance</div></div>
+          <div class="stat-cell"><div class="stat-val">${(race.bike.denivelé||0)+(race.run.denivelé||0)}m</div><div class="stat-label">D+</div></div>
+        </div>`;
+      segmentsHtml = `
+        <div class="tri-segments">
+          <div class="tri-segment">
+            <div class="seg-icon">🏊</div>
+            <div class="seg-info"><div class="seg-name">Natation</div><div class="seg-detail">${race.swim.distance}m · ${calcPace(race.swim.distance/1000, race.swim.time, 'swim')}</div></div>
+            <div class="seg-time seg-swim">${race.swim.time}</div>
+          </div>
+          <div class="tri-segment" style="opacity:0.6">
+            <div class="seg-icon">⇄</div>
+            <div class="seg-info"><div class="seg-name">Transition T1</div></div>
+            <div class="seg-time" style="color:var(--text2)">${race.t1}</div>
+          </div>
+          <div class="tri-segment">
+            <div class="seg-icon">🚴</div>
+            <div class="seg-info"><div class="seg-name">Vélo</div><div class="seg-detail">${race.bike.distance}km · ${calcPace(race.bike.distance, race.bike.time, 'bike')}</div></div>
+            <div class="seg-time seg-bike">${race.bike.time}</div>
+          </div>
+          <div class="tri-segment" style="opacity:0.6">
+            <div class="seg-icon">⇄</div>
+            <div class="seg-info"><div class="seg-name">Transition T2</div></div>
+            <div class="seg-time" style="color:var(--text2)">${race.t2}</div>
+          </div>
+          <div class="tri-segment">
+            <div class="seg-icon">🏃</div>
+            <div class="seg-info"><div class="seg-name">Course</div><div class="seg-detail">${race.run.distance}km · ${calcPace(race.run.distance, race.run.time)}</div></div>
+            <div class="seg-time seg-run-c">${race.run.time}</div>
+          </div>
+        </div>`;
+    } else {
+      statsHtml = `
+        <div class="feed-stats">
+          <div class="stat-cell"><div class="stat-val">${race.time}</div><div class="stat-label">Temps</div></div>
+          <div class="stat-cell"><div class="stat-val">${race.distance}km</div><div class="stat-label">Distance</div></div>
+          <div class="stat-cell"><div class="stat-val">${race.denivelé > 0 ? race.denivelé+'m' : calcPace(race.distance, race.time)}</div><div class="stat-label">${race.denivelé > 0 ? 'D+' : 'Allure'}</div></div>
+        </div>`;
+    }
+
+    return `
+      <div class="feed-card" style="animation-delay:${Math.random()*0.2}s">
+        <div class="feed-card-header">
+          <div class="feed-avatar">${author.pseudo[0].toUpperCase()}</div>
+          <div class="feed-meta">
+            <div class="feed-name">${author.pseudo}</div>
+            <div class="feed-date">${dateStr} · ${race.location || ''}</div>
+          </div>
+          <span class="sport-badge ${badgeClass}">${badgeLabel}</span>
+        </div>
+        <div class="feed-race-name">${race.name}</div>
+        ${segmentsHtml}
+        ${statsHtml}
+        <div class="feed-actions">
+          <button class="btn-like ${liked ? 'liked' : ''}" onclick="toggleLike('${race.id}')">
+            <svg viewBox="0 0 24 24" fill="${liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            ${likeCount > 0 ? likeCount : ''} ${liked ? 'Aimé' : 'Like'}
+          </button>
+          <button class="btn-like" onclick="openRaceDetail('${race.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Détail
+          </button>
+          ${isMyRace ? `<button class="btn-like" style="margin-left:auto;color:#ef4444;border-color:rgba(239,68,68,0.3)" onclick="deleteRace('${race.id}')">🗑️</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ───────────────────────────────────────────
+// RENDER MY RACES
+// ───────────────────────────────────────────
+function renderMyRaces() {
+  const user = getCurrentUser();
+  const races = getRaces().filter(r => r.userId === user.id);
+  const container = document.getElementById('my-race-list');
+
+  // stats
+  let totalKm = 0, totalD = 0, trails = 0, tris = 0;
+  races.forEach(r => {
+    if (r.type === 'tri') {
+      totalKm += (r.swim.distance/1000) + r.bike.distance + r.run.distance;
+      totalD += (r.bike.denivelé||0) + (r.run.denivelé||0);
+      tris++;
+    } else {
+      totalKm += r.distance;
+      totalD += r.denivelé || 0;
+      if (r.type === 'trail') trails++;
+    }
+  });
+  document.getElementById('st-total').textContent = races.length;
+  document.getElementById('st-km').textContent = Math.round(totalKm);
+  document.getElementById('st-d+').textContent = totalD.toLocaleString();
+  document.getElementById('st-trails').textContent = trails;
+
+  if (races.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">Aucune course</div><div class="empty-state-text">Ajoute ta première performance !</div></div>`;
+    return;
+  }
+
+  const colors = { trail: 'var(--accent-trail)', run: 'var(--accent-run)', tri: 'var(--accent-tri)' };
+  container.innerHTML = races.map(r => {
+    const time = r.type === 'tri' ? calcTotalTime(r) : r.time;
+    const dist = r.type === 'tri' ? ((r.swim.distance/1000)+r.bike.distance+r.run.distance).toFixed(1)+'km' : r.distance+'km';
+    const dateStr = new Date(r.date).toLocaleDateString('fr-FR', {day:'numeric', month:'short', year:'numeric'});
+    return `
+      <div class="race-list-item" onclick="openRaceDetail('${r.id}')">
+        <div class="race-list-dot" style="background:${colors[r.type]}"></div>
+        <div class="race-list-info">
+          <div class="race-list-name">${r.name}</div>
+          <div class="race-list-meta">${dateStr} · ${dist}</div>
+        </div>
+        <div class="race-list-time">${time}</div>
+      </div>`;
+  }).join('');
+}
+
+// ───────────────────────────────────────────
+// RENDER ADMIN
+// ───────────────────────────────────────────
+function renderAdmin() {
+  const users = getUsers();
+  const container = document.getElementById('admin-user-list');
+  const currentUser = getCurrentUser();
+  const races = getRaces();
+
+  container.innerHTML = users.map(u => {
+    const raceCount = races.filter(r => r.userId === u.id).length;
+    return `
+      <div class="admin-user-row">
+        <div class="admin-avatar">${u.pseudo[0].toUpperCase()}</div>
+        <div class="admin-user-info">
+          <div class="admin-user-name">${u.pseudo} ${u.isAdmin ? '👑' : ''}</div>
+          <div class="admin-user-meta">${u.email} · ${u.country} · ${raceCount} course(s)</div>
+        </div>
+        ${u.id !== currentUser.id ? `<button class="btn-sm-danger" onclick="adminDeleteUser('${u.id}')">Suppr.</button>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function adminDeleteUser(userId) {
+  if (!confirm('Supprimer cet utilisateur et toutes ses données (RGPD) ?')) return;
+  const users = getUsers().filter(u => u.id !== userId);
+  saveUsers(users);
+  const races = getRaces().filter(r => r.userId !== userId);
+  saveRaces(races);
+  renderAdmin(); renderFeed(); renderMyRaces();
+  showToast('✅ Utilisateur supprimé');
+}
+
+// ───────────────────────────────────────────
+// LIKE
+// ───────────────────────────────────────────
+function toggleLike(raceId) {
+  const user = getCurrentUser();
+  const races = getRaces();
+  const race = races.find(r => r.id === raceId);
+  if (!race) return;
+  const idx = race.liked.indexOf(user.id);
+  if (idx === -1) race.liked.push(user.id);
+  else race.liked.splice(idx, 1);
+  saveRaces(races);
+  renderFeed();
+}
+
+// ───────────────────────────────────────────
+// DELETE RACE
+// ───────────────────────────────────────────
+function deleteRace(raceId) {
+  if (!confirm('Supprimer cette course ?')) return;
+  saveRaces(getRaces().filter(r => r.id !== raceId));
+  renderFeed(); renderMyRaces();
+  showToast('🗑️ Course supprimée');
+}
+
+// ───────────────────────────────────────────
+// RACE DETAIL MODAL
+// ───────────────────────────────────────────
+function openRaceDetail(raceId) {
+  const race = getRaces().find(r => r.id === raceId);
+  if (!race) return;
+  document.getElementById('modal-race-name').textContent = race.name;
+  const dateStr = new Date(race.date).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
+
+  let html = `<div style="color:var(--text3);font-size:13px;margin-bottom:16px">${dateStr} · ${race.location || '—'}</div>`;
+
+  if (race.type === 'tri') {
+    const total = calcTotalTime(race);
+    html += `
+      <div class="detail-stat-grid">
+        <div class="detail-stat"><div class="detail-stat-val">${total}</div><div class="detail-stat-label">Temps total</div></div>
+        <div class="detail-stat"><div class="detail-stat-val">${((race.swim.distance/1000)+race.bike.distance+race.run.distance).toFixed(1)}km</div><div class="detail-stat-label">Distance totale</div></div>
+      </div>
+      <div style="margin:16px 0 12px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3)">Segments</div>
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:8px">
+        <div style="color:var(--accent-swim);font-size:12px;font-weight:600;margin-bottom:8px">🏊 NATATION</div>
+        <div class="detail-stat-grid">
+          <div class="detail-stat"><div class="detail-stat-val">${race.swim.distance}m</div><div class="detail-stat-label">Distance</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${race.swim.time}</div><div class="detail-stat-label">Temps</div></div>
+          <div class="detail-stat" style="grid-column:span 2"><div class="detail-stat-val">${calcPace(race.swim.distance/1000, race.swim.time, 'swim')}</div><div class="detail-stat-label">Allure</div></div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:8px;color:var(--text3);font-size:12px">⇄ T1 : ${race.t1}</div>
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:8px">
+        <div style="color:var(--accent-bike);font-size:12px;font-weight:600;margin-bottom:8px">🚴 VÉLO</div>
+        <div class="detail-stat-grid">
+          <div class="detail-stat"><div class="detail-stat-val">${race.bike.distance}km</div><div class="detail-stat-label">Distance</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${race.bike.denivelé||0}m</div><div class="detail-stat-label">D+</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${race.bike.time}</div><div class="detail-stat-label">Temps</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${calcPace(race.bike.distance, race.bike.time, 'bike')}</div><div class="detail-stat-label">Vitesse</div></div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:8px;color:var(--text3);font-size:12px">⇄ T2 : ${race.t2}</div>
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="color:var(--accent-run);font-size:12px;font-weight:600;margin-bottom:8px">🏃 COURSE</div>
+        <div class="detail-stat-grid">
+          <div class="detail-stat"><div class="detail-stat-val">${race.run.distance}km</div><div class="detail-stat-label">Distance</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${race.run.denivelé||0}m</div><div class="detail-stat-label">D+</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${race.run.time}</div><div class="detail-stat-label">Temps</div></div>
+          <div class="detail-stat"><div class="detail-stat-val">${calcPace(race.run.distance, race.run.time)}</div><div class="detail-stat-label">Allure</div></div>
+        </div>
+      </div>`;
+  } else {
+    html += `
+      <div class="detail-stat-grid">
+        <div class="detail-stat"><div class="detail-stat-val">${race.time}</div><div class="detail-stat-label">Temps</div></div>
+        <div class="detail-stat"><div class="detail-stat-val">${race.distance}km</div><div class="detail-stat-label">Distance</div></div>
+        <div class="detail-stat"><div class="detail-stat-val">${race.denivelé||0}m</div><div class="detail-stat-label">Dénivelé +</div></div>
+        <div class="detail-stat"><div class="detail-stat-val">${calcPace(race.distance, race.time)}</div><div class="detail-stat-label">Allure</div></div>
+      </div>`;
+  }
+
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('race-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('race-modal').classList.remove('open');
+}
+
+// ───────────────────────────────────────────
+// EXPORT CSV
+// ───────────────────────────────────────────
+function exportMyData() {
+  const user = getCurrentUser();
+  const races = getRaces().filter(r => r.userId === user.id);
+  let csv = 'Nom,Date,Sport,Lieu,Distance_km,Denivelé_m,Temps,Allure\n';
+  races.forEach(r => {
+    if (r.type === 'tri') {
+      const total = calcTotalTime(r);
+      const dist = ((r.swim.distance/1000)+r.bike.distance+r.run.distance).toFixed(1);
+      csv += `"${r.name}","${r.date}","Triathlon","${r.location||''}","${dist}","${(r.bike.denivelé||0)+(r.run.denivelé||0)}","${total}","Multi-sport"\n`;
+    } else {
+      csv += `"${r.name}","${r.date}","${r.type}","${r.location||''}","${r.distance}","${r.denivelé||0}","${r.time}","${calcPace(r.distance,r.time)}"\n`;
+    }
+  });
+  downloadCSV(csv, `enduro_${user.pseudo}_${new Date().toISOString().split('T')[0]}.csv`);
+  showToast('📊 Export téléchargé !');
+}
+
+function exportAllData() {
+  const users = getUsers();
+  const races = getRaces();
+  let csv = 'Athlète,Email,Nom_course,Date,Sport,Lieu,Distance_km,Dénivelé_m,Temps\n';
+  races.forEach(r => {
+    const u = users.find(u => u.id === r.userId) || { pseudo:'?', email:'?' };
+    if (r.type === 'tri') {
+      csv += `"${u.pseudo}","${u.email}","${r.name}","${r.date}","Triathlon","${r.location||''}","${((r.swim.distance/1000)+r.bike.distance+r.run.distance).toFixed(1)}","—","${calcTotalTime(r)}"\n`;
+    } else {
+      csv += `"${u.pseudo}","${u.email}","${r.name}","${r.date}","${r.type}","${r.location||''}","${r.distance}","${r.denivelé||0}","${r.time}"\n`;
+    }
+  });
+  downloadCSV(csv, `enduro_all_${new Date().toISOString().split('T')[0]}.csv`);
+  showToast('🗂️ Export global téléchargé !');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+}
+
+function deleteMyAccount() {
+  if (!confirm('Supprimer définitivement ton compte et toutes tes données ?\n\nCette action est irréversible (RGPD Art. 17).')) return;
+  const user = getCurrentUser();
+  saveUsers(getUsers().filter(u => u.id !== user.id));
+  saveRaces(getRaces().filter(r => r.userId !== user.id));
+  DB.del('currentUser');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  showToast('✅ Compte supprimé');
+}
+
+// ───────────────────────────────────────────
+// TOAST
+// ───────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── CLOSE MODAL ON OVERLAY CLICK ──
+document.getElementById('race-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── INIT ──
+seedDemo();
+const cu = getCurrentUser();
+if (cu) launchApp(cu);
+</script>
+</body>
+</html>

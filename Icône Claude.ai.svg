@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0a0a0f"/>
+  
+  <!-- Subtle gradient overlay -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#FF4D1C" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0a0a0f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#glow)"/>
+  
+  <!-- Letter E stylisé -->
+  <text 
+    x="256" 
+    y="330" 
+    font-family="Arial Black, Arial, sans-serif" 
+    font-size="320" 
+    font-weight="900"
+    fill="#FF4D1C" 
+    text-anchor="middle"
+    letter-spacing="-10"
+  >E</text>
+  
+  <!-- Ligne de vitesse décorative -->
+  <rect x="80" y="400" width="352" height="6" rx="3" fill="#FF4D1C" opacity="0.6"/>
+  <rect x="120" y="416" width="200" height="4" rx="2" fill="#FF4D1C" opacity="0.3"/>
+</svg>
